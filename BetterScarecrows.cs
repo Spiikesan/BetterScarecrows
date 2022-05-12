@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using ProtoBuf;
@@ -10,24 +11,30 @@ namespace Oxide.Plugins
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
+        const string b64ScarecrowDesign = "CAEIAwgPCBoIGwgcElIIABABGhQIARABGAAgACgAMACqBgUNAAAgQRoZCAMQBRgAIAQoADABogYKDQAAAAAVAAAAABoZCAAQAxgAIAAoADACogYKDQAAQEAVAACgQCAAEj0IARADGgwIBRACGAAgACgAMAAaDAgUEAAYACAAKAAwARoZCAMQBRgAIAQoADACogYKDQAAAAAVAAAAACAAEkUIAhAPGgwIFBAAGAAgACgAMAAaDAgFEAEYASAAKAAwARohCBMQBBgAIAAoADAEogYKDQAAAAAVAAAAAOoGBQ3NzMw9IAASeggDEBoaGQgCEAAYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAAYACAAKAAwAqIGCg0AAAAAFQAAAAAaIQgBEAEYACAAKAAwA6IGCg0AAAAAFQAAAACqBgUNAAAgQRoZCAMQBRgAIAQoADAEogYKDQAAAAAVAAAAACAAEjwIBBAbGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBABGAAgACgAMAKiBgoNAAAAABUAAAAAIAASPAgFEBwaGQgCEAEYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAAYACAAKAAwAqIGCg0AAAAAFQAAAAAgABgAIhBCZXR0ZXIgc2NhcmVjcm93KAEwAA==";
+
+        const float SOUND_DELAY = 3f;
+
         static AIState _lastAIStateEnumValue = Enum.GetValues(typeof(AIState)).Cast<AIState>().Max() + 1;
-        ProtoBuf.AIDesign _customDesign;
         static BetterScarecrows _instance;
-        const string b64ScarecrowDesign = "CAEIAwgPCBoIGxJSCAAQARoUCAEQARgAIAAoADAAqgYFDQAAIEEaGQgDEAEYACAEKAAwAaIGCg0AAAAAFQAAAAAaGQgAEAMYACAAKAAwAqIGCg0AAEBAFQAAoEAgABIiCAEQAxoMCAUQAhgAIAAoADAAGgwIFBAAGAAgACgAMAEgABJFCAIQDxoMCBQQABgAIAAoADAAGgwIBRABGAEgACgAMAEaIQgTEAQYACAAKAAwBKIGCg0AAAAAFQAAAADqBgUNzczMPSAAEnoIAxAaGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBAAGAAgACgAMAKiBgoNAAAAABUAAAAAGiEIARABGAAgACgAMAOiBgoNAAAAABUAAAAAqgYFDQAAIEEaGQgDEAEYACAEKAAwBKIGCg0AAAAAFQAAAAAgABI8CAQQGxoZCAIQABgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAACAAGAAiEEJldHRlciBzY2FyZWNyb3coADAA";
+
         enum AICustomState
         {
             UnusedState, //For compatibility with my AIManager plugin (used to create or update the content of the b64ScarecrowDesign) - Do not remove
             RoamState,
-            ThrowGrenadeState
+            ThrowGrenadeState,
+            FleeInhuman,
             // Maybe more states in the future ?
         };
+
+        ProtoBuf.AIDesign _customDesign;
 
         #region Oxide hooks
         void Init()
         {
             _instance = this;
             _customDesign = ProtoBuf.AIDesign.Deserialize(Convert.FromBase64String(b64ScarecrowDesign));
-            if(_customDesign == null)
+            if (_customDesign == null)
             {
                 PrintError("The custom design could not be loaded !");
                 Unload();
@@ -48,14 +55,24 @@ namespace Oxide.Plugins
         private void OnEntitySpawned(ScarecrowNPC entity)
         {
             entity.InitializeHealth(250, 250);
-            NextTick(() => {
+            NextTick(() =>
+            {
                 updateEntityBrain(entity, false);
             });
         }
+
+        private void OnEntityDeath(ScarecrowNPC entity)
+        {
+            Effect.server.Run("assets/prefabs/npc/murderer/sound/death.prefab", entity, 0, Vector3.zero, entity.eyes.transform.forward.normalized);
+        }
+
         #endregion
 
         #region Helpers
-        static AIState GetStateId(AICustomState state) => (AIState)((int)_lastAIStateEnumValue + (int)state);
+        static AIState GetAIState(AICustomState state) => (AIState)((int)_lastAIStateEnumValue + (int)state);
+        static AICustomState GetAICustomState(AIState state) => (AICustomState)((int)state - (int)_lastAIStateEnumValue);
+
+        static bool IsCustomState(AIState state) => state >= _lastAIStateEnumValue;
 
         public void updateAllScarecrows(bool revert)
         {
@@ -74,26 +91,32 @@ namespace Oxide.Plugins
             entity.Brain.SenseRange = 15f;
             if (!revert)
             {
-                if (!entity.Brain.states.ContainsKey(GetStateId(AICustomState.RoamState)))
+                if (!entity.gameObject.HasComponent<ScarecrowSounds>())
+                    entity.gameObject.AddComponent<ScarecrowSounds>();
+                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.RoamState)))
                     entity.Brain.AddState(new RoamState());
-                if (!entity.Brain.states.ContainsKey(GetStateId(AICustomState.ThrowGrenadeState)))
+                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.ThrowGrenadeState)))
                     entity.Brain.AddState(new ThrowGrenadeState());
+                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.FleeInhuman)))
+                    entity.Brain.AddState(new FleeInhuman());
                 entity.Brain.InstanceSpecificDesign = _customDesign;
             }
             else
             {
                 entity.Brain.InstanceSpecificDesign = null;
+                if (entity.gameObject.HasComponent<ScarecrowSounds>())
+                    UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
             }
             entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
         }
 
         #endregion
 
-        #region Custom States
-        public class RoamState : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        #region Custom states
+        private class RoamState : BaseAIBrain<ScarecrowNPC>.BasicAIState
         {
             private StateStatus status = StateStatus.Error;
-            public RoamState() : base(GetStateId(AICustomState.RoamState))
+            public RoamState() : base(GetAIState(AICustomState.RoamState))
             {
             }
 
@@ -144,7 +167,7 @@ namespace Oxide.Plugins
             }
         }
 
-        public class ThrowGrenadeState : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        private class ThrowGrenadeState : BaseAIBrain<ScarecrowNPC>.BasicAIState
         {
             bool _isThrown;
             NPCPlayer _entity = null;
@@ -153,7 +176,7 @@ namespace Oxide.Plugins
             const float _MAX_DISTANCE = 5f;
             const float _THROW_TIME = 1.5f;
 
-            public ThrowGrenadeState() : base(GetStateId(AICustomState.ThrowGrenadeState))
+            public ThrowGrenadeState() : base(GetAIState(AICustomState.ThrowGrenadeState))
             {
                 AgrresiveState = true;
             }
@@ -212,6 +235,161 @@ namespace Oxide.Plugins
             {
                 base.StateLeave();
                 _entity.UpdateActiveItem(_entity.inventory.containerBelt.GetSlot(0).uid);
+            }
+        }
+
+        public class FleeInhuman : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        {
+            private float nextInterval;
+            private float stopFleeDistance;
+
+            public FleeInhuman() : base(GetAIState(AICustomState.FleeInhuman))
+            {
+
+            }
+
+            private bool FleeFrom(BaseEntity fleeFromEntity, BaseEntity thisEntity)
+            {
+                Vector3 vector3;
+                if (thisEntity == null || fleeFromEntity == null)
+                {
+                    return false;
+                }
+                nextInterval = UnityEngine.Random.Range(3f, 6f);
+                if (!brain.PathFinder.GetBestFleePosition(brain.Navigator, brain.Senses, fleeFromEntity, brain.Events.Memory.Position.Get(4), 50f, 100f, out vector3))
+                {
+                    return false;
+                }
+                bool flag = brain.Navigator.SetDestination(vector3, BaseNavigator.NavigationSpeed.Fast, 0f, 0f);
+                if (!flag)
+                {
+                    Stop();
+                }
+                return flag;
+            }
+
+            public override void StateEnter()
+            {
+                base.StateEnter();
+                BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
+                if (baseEntity != null && !(baseEntity is BasePlayer))
+                {
+                    stopFleeDistance = UnityEngine.Random.Range(5f, 10f);
+                    FleeFrom(baseEntity, GetEntity());
+                }
+            }
+
+            public override bool CanLeave()
+            {
+                BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
+                return base.CanLeave() && ( baseEntity == null || baseEntity is BasePlayer || Vector3Ex.Distance2D(brain.Navigator.transform.position, baseEntity.transform.position) >= stopFleeDistance );
+            }
+
+            public override void StateLeave()
+            {
+                base.StateLeave();
+                Stop();
+            }
+
+            public override StateStatus StateThink(float delta)
+            {
+                base.StateThink(delta);
+                BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
+                if (baseEntity == null)
+                {
+                    return StateStatus.Finished;
+                }
+                else if (baseEntity is BasePlayer)
+                {
+                    return StateStatus.Error;
+                }
+                if (Vector3Ex.Distance2D(brain.Navigator.transform.position, baseEntity.transform.position) >= stopFleeDistance)
+                {
+                    return StateStatus.Finished;
+                }
+                if (!brain.Navigator.UpdateIntervalElapsed(nextInterval) && brain.Navigator.Moving || FleeFrom(baseEntity, GetEntity()))
+                {
+                    return StateStatus.Running;
+                }
+                return StateStatus.Error;
+            }
+
+            private void Stop()
+            {
+                brain.Navigator.Stop();
+            }
+        }
+        #endregion
+
+        #region Sound management
+
+        private class ScarecrowSounds : FacepunchBehaviour
+        {
+            public ScarecrowNPC Scarecrow { get; private set; }
+
+            private Dictionary<AIState, Sound> sounds = new Dictionary<AIState, Sound>();
+            Sound lastSound;
+
+            public void Awake()
+            {
+                Scarecrow = GetComponent<ScarecrowNPC>();
+
+                Sound breathingSound = new Sound("assets/prefabs/npc/murderer/sound/breathing.prefab", 1f, 10f, 0.8f);
+
+                sounds.Add(AIState.Chase, breathingSound);
+                sounds.Add(AIState.Attack, breathingSound);
+            }
+
+            public void Update()
+            {
+                Sound sound;
+
+                if (sounds.TryGetValue(Scarecrow.Brain.CurrentState.StateType, out sound))
+                {
+                    sound.TryExecute(Scarecrow, Time.deltaTime);
+
+                    if (lastSound != sound)
+                    {
+                        lastSound = sound;
+                    }
+                }
+            }
+
+            private class Sound
+            {
+                public string SoundName { get; private set; }
+                public float StartDelay { get; private set; }
+                public float MinDelay { get; private set; }
+                public float Chance { get; private set; }
+
+                private float currentDelay;
+
+                public Sound(string soundName, float startDelay, float minDelay, float chance)
+                {
+                    SoundName = soundName;
+                    StartDelay = startDelay;
+                    MinDelay = minDelay;
+                    Chance = chance > 1f ? 1f : chance < 0f ? 0f : chance;
+                    Reset();
+                }
+
+                public void TryExecute(ScarecrowNPC entity, float deltaTime)
+                {
+                    currentDelay += deltaTime;
+                    bool runSound = ((currentDelay >= MinDelay)
+                                    && (!(1.0f - Chance > 0.0)
+                                        || UnityEngine.Random.Range(0f, 1f) < Chance));
+                    if (runSound)
+                    {
+                        Effect.server.Run(SoundName, entity, 0, Vector3.zero, entity.eyes.transform.forward.normalized);
+                        currentDelay = 0f;
+                    }
+                }
+
+                public void Reset()
+                {
+                    currentDelay = MinDelay - StartDelay;
+                }
             }
         }
         #endregion
