@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "0.1.0")]
+    [Info("Better Scarecrows", "Spiikesan", "1.0.0")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
