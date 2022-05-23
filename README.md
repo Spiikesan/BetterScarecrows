@@ -14,26 +14,10 @@ Improve scarecrows by :
 * Attacking when they are attacked. They respond to try to stay alive, and are not "passive" anymore if hit when they didn't see you.
 * Flee from non human threat that are attacking them (like cactus). They will not have time to escape turrets, tho.
 
-
-## Permissions
-
-No permission.
-
-## Commands
-
-No dedicated command.
-
-## Roadmap / Suggestions
-
-To be defined.
-
 ## Configuration
 
 The only configurable aspects are the halloween.scarecrows_throw_beancans and halloween.scarecrow_throw_beancan_global_delay server console variables.
 
-## Localization
+## Credits
 
-N/A
-
-## Credits 
-- **Spiikesan** Author
+- **Spiikesan**, the author of the plugin
