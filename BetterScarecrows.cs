@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.0.0")]
+    [Info("Better Scarecrows", "Spiikesan", "1.0.1")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -86,28 +86,31 @@ namespace Oxide.Plugins
 
         private void updateEntityBrain(ScarecrowNPC entity, bool revert)
         {
-            entity.Brain.AttackRangeMultiplier = 0.75f;
-            entity.Brain.TargetLostRange = 20f;
-            entity.Brain.SenseRange = 15f;
-            if (!revert)
+            if (entity != null && !entity.IsDestroyed)
             {
-                if (!entity.gameObject.HasComponent<ScarecrowSounds>())
-                    entity.gameObject.AddComponent<ScarecrowSounds>();
-                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.RoamState)))
-                    entity.Brain.AddState(new RoamState());
-                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.ThrowGrenadeState)))
-                    entity.Brain.AddState(new ThrowGrenadeState());
-                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.FleeInhuman)))
-                    entity.Brain.AddState(new FleeInhuman());
-                entity.Brain.InstanceSpecificDesign = _customDesign;
+                entity.Brain.AttackRangeMultiplier = 0.75f;
+                entity.Brain.TargetLostRange = 20f;
+                entity.Brain.SenseRange = 15f;
+                if (!revert)
+                {
+                    if (!entity.gameObject.HasComponent<ScarecrowSounds>())
+                        entity.gameObject.AddComponent<ScarecrowSounds>();
+                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.RoamState)))
+                        entity.Brain.AddState(new RoamState());
+                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.ThrowGrenadeState)))
+                        entity.Brain.AddState(new ThrowGrenadeState());
+                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.FleeInhuman)))
+                        entity.Brain.AddState(new FleeInhuman());
+                    entity.Brain.InstanceSpecificDesign = _customDesign;
+                }
+                else
+                {
+                    entity.Brain.InstanceSpecificDesign = null;
+                    if (entity.gameObject.HasComponent<ScarecrowSounds>())
+                        UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
+                }
+                entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
             }
-            else
-            {
-                entity.Brain.InstanceSpecificDesign = null;
-                if (entity.gameObject.HasComponent<ScarecrowSounds>())
-                    UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
-            }
-            entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
         }
 
         #endregion
