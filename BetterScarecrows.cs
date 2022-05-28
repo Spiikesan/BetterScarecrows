@@ -7,13 +7,15 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.0.1")]
+    [Info("Better Scarecrows", "Spiikesan", "1.1.1")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
-        const string b64ScarecrowDesign = "CAEIAwgPCBoIGwgcElIIABABGhQIARABGAAgACgAMACqBgUNAAAgQRoZCAMQBRgAIAQoADABogYKDQAAAAAVAAAAABoZCAAQAxgAIAAoADACogYKDQAAQEAVAACgQCAAEj0IARADGgwIBRACGAAgACgAMAAaDAgUEAAYACAAKAAwARoZCAMQBRgAIAQoADACogYKDQAAAAAVAAAAACAAEkUIAhAPGgwIFBAAGAAgACgAMAAaDAgFEAEYASAAKAAwARohCBMQBBgAIAAoADAEogYKDQAAAAAVAAAAAOoGBQ3NzMw9IAASeggDEBoaGQgCEAAYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAAYACAAKAAwAqIGCg0AAAAAFQAAAAAaIQgBEAEYACAAKAAwA6IGCg0AAAAAFQAAAACqBgUNAAAgQRoZCAMQBRgAIAQoADAEogYKDQAAAAAVAAAAACAAEjwIBBAbGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBABGAAgACgAMAKiBgoNAAAAABUAAAAAIAASPAgFEBwaGQgCEAEYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAAYACAAKAAwAqIGCg0AAAAAFQAAAAAgABgAIhBCZXR0ZXIgc2NhcmVjcm93KAEwAA==";
+        const string b64ScarecrowDesign = "CAEIAwgPCBoIGwgcCB0SUggAEAEaFAgBEAEYACAAKAAwAKoGBQ0AACBBGhkIAxAFGAAgBCgAMAGiBgoNAAAAABUAAAAAGhkIABAGGAAgACgAMAKiBgoNAAAAQRUAAHBBIAASPQgBEAMaDAgFEAIYACAAKAAwABoMCBQQABgAIAAoADABGhkIAxAFGAAgBCgAMAKiBgoNAAAAABUAAAAAIAASRQgCEA8aDAgUEAAYACAAKAAwABoMCAUQARgBIAAoADABGiEIExAEGAAgACgAMASiBgoNAAAAABUAAAAA6gYFDc3MzD0gABJ6CAMQGhoZCAIQABgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAABohCAEQARgAIAAoADADogYKDQAAAAAVAAAAAKoGBQ0AACBBGhkIAxAFGAAgBCgAMASiBgoNAAAAABUAAAAAIAASPAgEEBsaGQgCEAAYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAEYACAAKAAwAqIGCg0AAAAAFQAAAAAgABI8CAUQHBoZCAIQARgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAACAAEjwIBhAdGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBADGAAgACgAMAKiBgoNAAAAABUAAAAAIAAYACIQQmV0dGVyIHNjYXJlY3JvdygBMAA=";
 
         const float SOUND_DELAY = 3f;
+
+        bool dormantCheck;
 
         static AIState _lastAIStateEnumValue = Enum.GetValues(typeof(AIState)).Cast<AIState>().Max() + 1;
         static BetterScarecrows _instance;
@@ -24,6 +26,7 @@ namespace Oxide.Plugins
             RoamState,
             ThrowGrenadeState,
             FleeInhuman,
+            Awaken,
             // Maybe more states in the future ?
         };
 
@@ -101,6 +104,8 @@ namespace Oxide.Plugins
                         entity.Brain.AddState(new ThrowGrenadeState());
                     if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.FleeInhuman)))
                         entity.Brain.AddState(new FleeInhuman());
+                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.Awaken)))
+                        entity.Brain.AddState(new Awaken());
                     entity.Brain.InstanceSpecificDesign = _customDesign;
                 }
                 else
@@ -121,6 +126,17 @@ namespace Oxide.Plugins
             private StateStatus status = StateStatus.Error;
             public RoamState() : base(GetAIState(AICustomState.RoamState))
             {
+            }
+
+            public override bool CanEnter()
+            {
+                if (GetEntity().IsDormant && !_instance.dormantCheck)
+                {
+                    _instance.dormantCheck = true;
+                    _instance.PrintWarning("Entity " + GetEntity() + " is dormant.");
+                }
+
+                return base.CanEnter() && !GetEntity().IsDormant;
             }
 
             public override void StateEnter()
@@ -322,6 +338,28 @@ namespace Oxide.Plugins
                 brain.Navigator.Stop();
             }
         }
+
+        public class Awaken : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        {
+            BasePlayer[] players = new BasePlayer[1];
+
+            public Awaken() : base(GetAIState(AICustomState.Awaken))
+            {
+            }
+
+            public override StateStatus StateThink(float delta)
+            {
+                StateStatus status = StateStatus.Finished;
+                if (Rust.Ai.AiManager.ai_dormant
+                    && BaseEntity.Query.Server.GetPlayersInSphere(GetEntity().transform.position, Rust.Ai.AiManager.ai_to_player_distance_wakeup_range, players, (p) => p.userID.IsSteamId()) == 0)
+                {
+                    status = StateStatus.Error;
+                }
+                players[0] = null;
+                return status;
+            }
+        }
+
         #endregion
 
         #region Sound management

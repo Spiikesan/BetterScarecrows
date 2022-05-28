@@ -16,7 +16,14 @@ Improve scarecrows by :
 
 ## Configuration
 
-The only configurable aspects are the halloween.scarecrows_throw_beancans and halloween.scarecrow_throw_beancan_global_delay server console variables.
+All the configuration is done through server config variables.
+
+Set the amount of zombies with the **halloween.scarecrowpopulation** to allow them spawn all around the map (near structures)
+
+**halloween.scarecrows_throw_beancans** (true by default) allow them to throw their grenades and **halloween.scarecrow_throw_beancan_global_delay** to set the minimum delay between throws (default 8).
+
+**aimanager.ai_dormant** (default true) enable the capacity of scarecrows to "sleep" if there is no player in the **aimanager.ai_to_player_distance_wakeup_range** range (default to 160). It is greatly recommended to save server resources.
+You can also set the aimanager.ai_to_player_distance_wakeup_range to a lower value to save a little bit more resources (80 seems to be sufficient). Also, please note that the distance doesn't use the height axis. (it's only x and z).
 
 ## Credits
 
