@@ -18,7 +18,7 @@ Improve scarecrows by :
 
 All the configuration is done through server config variables.
 
-Set the amount of zombies with the **halloween.scarecrowpopulation** to allow them spawn all around the map (near structures)
+Set the amount of zombies per square kilometer with the **halloween.scarecrowpopulation** to allow them spawn all around the map (near structures)
 
 **halloween.scarecrows_throw_beancans** (true by default) allow them to throw their grenades and **halloween.scarecrow_throw_beancan_global_delay** to set the minimum delay between throws (default 8).
 
