@@ -1,21 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using ProtoBuf;
+using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.1.1")]
+    [Info("Better Scarecrows", "Spiikesan", "1.2.1")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
         const string b64ScarecrowDesign = "CAEIAwgPCBoIGwgcCB0SUggAEAEaFAgBEAEYACAAKAAwAKoGBQ0AACBBGhkIAxAFGAAgBCgAMAGiBgoNAAAAABUAAAAAGhkIABAGGAAgACgAMAKiBgoNAAAAQRUAAHBBIAASPQgBEAMaDAgFEAIYACAAKAAwABoMCBQQABgAIAAoADABGhkIAxAFGAAgBCgAMAKiBgoNAAAAABUAAAAAIAASRQgCEA8aDAgUEAAYACAAKAAwABoMCAUQARgBIAAoADABGiEIExAEGAAgACgAMASiBgoNAAAAABUAAAAA6gYFDc3MzD0gABJ6CAMQGhoZCAIQABgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAABohCAEQARgAIAAoADADogYKDQAAAAAVAAAAAKoGBQ0AACBBGhkIAxAFGAAgBCgAMASiBgoNAAAAABUAAAAAIAASPAgEEBsaGQgCEAAYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAEYACAAKAAwAqIGCg0AAAAAFQAAAAAgABI8CAUQHBoZCAIQARgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAACAAEjwIBhAdGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBADGAAgACgAMAKiBgoNAAAAABUAAAAAIAAYACIQQmV0dGVyIHNjYXJlY3JvdygBMAA=";
 
         const float SOUND_DELAY = 3f;
-
-        bool dormantCheck;
 
         static AIState _lastAIStateEnumValue = Enum.GetValues(typeof(AIState)).Cast<AIState>().Max() + 1;
         static BetterScarecrows _instance;
@@ -32,6 +29,93 @@ namespace Oxide.Plugins
 
         ProtoBuf.AIDesign _customDesign;
 
+        #region Configuration
+
+        private ScarecrowConfiguration _config;
+        private ConVars _previousConVars;
+
+        public class ConVars
+        {
+            [JsonProperty("OverrideConVars")]
+            public bool OverrideConVars = false;
+
+            [JsonProperty("ScarecrowPopulation")]
+            public float ScarecrowPopulation = 5.0f;
+
+            [JsonProperty("scarecrowsThrowBeancans")]
+            public bool ScarecrowsThrowBeancans = true;
+
+            [JsonProperty("scarecrowThrowBeancanGlobalDelay")]
+            public float ScarecrowThrowBeancanGlobalDelay = 8.0f;
+        }
+
+        public class Sounds
+        {
+            [JsonProperty("Death")]
+            public string Death = "assets/prefabs/npc/murderer/sound/death.prefab";
+
+            [JsonProperty("Breathing")]
+            public string Breathing = "assets/prefabs/npc/murderer/sound/breathing.prefab";
+        }
+
+        public class ScarecrowConfiguration
+        {
+            [JsonProperty("Health")]
+            public float Health = 250.0f;
+
+            [JsonProperty("AttackRangeMultiplier")]
+            public float AttackRangeMultiplier = 0.75f;
+
+            [JsonProperty("TargetLostRange")]
+            public float TargetLostRange = 20f;
+
+            [JsonProperty("SenseRange")]
+            public float SenseRange = 15f;
+
+            public Sounds Sounds = new Sounds();
+
+            [JsonProperty("ConVars")]
+            public ConVars ConVars = new ConVars();
+
+            public string ToJson() => JsonConvert.SerializeObject(this);
+
+            public Dictionary<string, object> ToDictionary() => JsonConvert.DeserializeObject<Dictionary<string, object>>(ToJson());
+        };
+
+        protected override void LoadDefaultConfig() => _config = new ScarecrowConfiguration();
+
+        protected override void LoadConfig()
+        {
+            base.LoadConfig();
+            try
+            {
+                _config = Config.ReadObject<ScarecrowConfiguration>();
+                if (_config == null)
+                {
+                    throw new JsonException();
+                }
+
+                if (!_config.ToDictionary().Keys.SequenceEqual(Config.ToDictionary(x => x.Key, x => x.Value).Keys))
+                {
+                    PrintWarning("Configuration appears to be outdated; updating and saving");
+                    SaveConfig();
+                }
+            }
+            catch
+            {
+                PrintWarning($"Configuration file {Name}.json is invalid; using defaults");
+                LoadDefaultConfig();
+            }
+        }
+
+        protected override void SaveConfig()
+        {
+            PrintWarning($"Configuration changes saved to {Name}.json");
+            Config.WriteObject(_config, true);
+        }
+
+        #endregion
+
         #region Oxide hooks
         void Init()
         {
@@ -47,17 +131,37 @@ namespace Oxide.Plugins
         void OnServerInitialized()
         {
             updateAllScarecrows(false);
+
+            if (_config.ConVars.OverrideConVars)
+            {
+                _previousConVars = new ConVars()
+                {
+                    OverrideConVars = true,
+                    ScarecrowPopulation = ConVar.Halloween.scarecrowpopulation,
+                    ScarecrowsThrowBeancans = ConVar.Halloween.scarecrows_throw_beancans,
+                    ScarecrowThrowBeancanGlobalDelay = ConVar.Halloween.scarecrow_throw_beancan_global_delay
+                };
+                ConVar.Halloween.scarecrowpopulation = _config.ConVars.ScarecrowPopulation;
+                ConVar.Halloween.scarecrows_throw_beancans = _config.ConVars.ScarecrowsThrowBeancans;
+                ConVar.Halloween.scarecrow_throw_beancan_global_delay = _config.ConVars.ScarecrowThrowBeancanGlobalDelay;
+            }
         }
 
         void Unload()
         {
             updateAllScarecrows(true);
+            if (_config.ConVars.OverrideConVars && _previousConVars != null)
+            {
+                ConVar.Halloween.scarecrowpopulation = _previousConVars.ScarecrowPopulation;
+                ConVar.Halloween.scarecrows_throw_beancans = _previousConVars.ScarecrowsThrowBeancans;
+                ConVar.Halloween.scarecrow_throw_beancan_global_delay = _previousConVars.ScarecrowThrowBeancanGlobalDelay;
+            }
             _instance = null;
         }
 
         private void OnEntitySpawned(ScarecrowNPC entity)
         {
-            entity.InitializeHealth(250, 250);
+            entity.InitializeHealth(_config.Health, _config.Health);
             NextTick(() =>
             {
                 updateEntityBrain(entity, false);
@@ -66,13 +170,14 @@ namespace Oxide.Plugins
 
         private void OnEntityDeath(ScarecrowNPC entity)
         {
-            Effect.server.Run("assets/prefabs/npc/murderer/sound/death.prefab", entity, 0, Vector3.zero, entity.eyes.transform.forward.normalized);
+            Effect.server.Run(_config.Sounds.Death, entity, 0, Vector3.zero, entity.eyes.transform.forward.normalized);
         }
 
         #endregion
 
         #region Helpers
         static AIState GetAIState(AICustomState state) => (AIState)((int)_lastAIStateEnumValue + (int)state);
+
         static AICustomState GetAICustomState(AIState state) => (AICustomState)((int)state - (int)_lastAIStateEnumValue);
 
         static bool IsCustomState(AIState state) => state >= _lastAIStateEnumValue;
@@ -91,9 +196,9 @@ namespace Oxide.Plugins
         {
             if (entity != null && !entity.IsDestroyed)
             {
-                entity.Brain.AttackRangeMultiplier = 0.75f;
-                entity.Brain.TargetLostRange = 20f;
-                entity.Brain.SenseRange = 15f;
+                entity.Brain.AttackRangeMultiplier = _config.AttackRangeMultiplier;
+                entity.Brain.TargetLostRange = _config.TargetLostRange;
+                entity.Brain.SenseRange = _config.SenseRange;
                 if (!revert)
                 {
                     if (!entity.gameObject.HasComponent<ScarecrowSounds>())
@@ -126,17 +231,6 @@ namespace Oxide.Plugins
             private StateStatus status = StateStatus.Error;
             public RoamState() : base(GetAIState(AICustomState.RoamState))
             {
-            }
-
-            public override bool CanEnter()
-            {
-                if (GetEntity().IsDormant && !_instance.dormantCheck)
-                {
-                    _instance.dormantCheck = true;
-                    _instance.PrintWarning("Entity " + GetEntity() + " is dormant.");
-                }
-
-                return base.CanEnter() && !GetEntity().IsDormant;
             }
 
             public override void StateEnter()
@@ -375,7 +469,7 @@ namespace Oxide.Plugins
             {
                 Scarecrow = GetComponent<ScarecrowNPC>();
 
-                Sound breathingSound = new Sound("assets/prefabs/npc/murderer/sound/breathing.prefab", 1f, 10f, 0.8f);
+                Sound breathingSound = new Sound(_instance._config.Sounds.Breathing, 1f, 10f, 0.8f);
 
                 sounds.Add(AIState.Chase, breathingSound);
                 sounds.Add(AIState.Attack, breathingSound);

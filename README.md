@@ -16,14 +16,35 @@ Improve scarecrows by :
 
 ## Configuration
 
-All the configuration is done through server config variables.
+Simple configuration is done through server ConVars.
 
 Set the amount of zombies per square kilometer with the **halloween.scarecrowpopulation** to allow them spawn all around the map (near structures)
-
 **halloween.scarecrows_throw_beancans** (true by default) allow them to throw their grenades and **halloween.scarecrow_throw_beancan_global_delay** to set the minimum delay between throws (default 8).
 
 **aimanager.ai_dormant** (default true) enable the capacity of scarecrows to "sleep" if there is no player in the **aimanager.ai_to_player_distance_wakeup_range** range (default to 160). It is greatly recommended to save server resources.
 You can also set the aimanager.ai_to_player_distance_wakeup_range to a lower value to save a little bit more resources (80 seems to be sufficient). Also, please note that the distance doesn't use the height axis. (it's only x and z).
+
+The config file is as follows :
+
+```json
+{
+  "Health": 250.0, //Health of the scarecrow. Keep in mind that damage modifiers doesn't work anymore.
+  "AttackRangeMultiplier": 0.75, //Attack range of the scarecrow, as a multiplier of the weapon. The applied formula is 2 * weaponRange * AttackRangeMultiplier.
+  "TargetLostRange": 20.0, //Distance to be forgotten by the scarecrow
+  "SenseRange": 15.0, //View distance of the scarecrow to be targeted
+  "Sounds": {
+    "Death": "assets/prefabs/npc/murderer/sound/death.prefab",
+    "Breathing": "assets/prefabs/npc/murderer/sound/breathing.prefab"
+  },
+  "ConVars": {
+    "OverrideConVars": false, //Set to true to replace the Halloween ConVars with given values.
+    "ScarecrowPopulation": 5.0, //If OverrideConVars is true : The population of scarecrow, by square kilometer. Need to be more than 0.
+    "scarecrowsThrowBeancans": true, //If OverrideConVars is true : Allow scarecrows to throw beancan grenades
+    "scarecrowThrowBeancanGlobalDelay": 8.0 //If OverrideConVars is true : Delay between two grenades throws, if enabled.
+  }
+}
+```
+
 
 ## Credits
 
