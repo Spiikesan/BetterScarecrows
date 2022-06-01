@@ -7,7 +7,7 @@ Repair broken scarecrows by :
 * Set the delay between grenade throwing (via the original ConVar halloween.scarecrow_throw_beancan_global_delay, defaults to 8). There is also a 10% chance to throw.
 * Repair their life. Note that multipliers doesn't work anymore so they have a little bit more life by default.
 * Repair they reach distance.
-* Repair their sounds.
+* Repair their sounds (Thanks to Flames for the Chainsaw).
 
 Improve scarecrows by :
 * Allowing them to roam like animals. No more dormant zombies !
