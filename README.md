@@ -33,8 +33,8 @@ The config file is as follows :
   "TargetLostRange": 20.0, //Distance to be forgotten by the scarecrow
   "SenseRange": 15.0, //View distance of the scarecrow to be targeted
   "IgnoreSafeZonePlayers": true, //Do not attack players in safe zone. Usefull if the CanNPCTurretsTargetScarecrow is set to true.
-  "CanBradleyAPCTargetScarecrow": false, //Do Bradley have to ignore scarecrows ?
-  "CanNPCTurretsTargetScarecrow": false, //Do NPC turrets have to ignore scarecrows ?
+  "CanBradleyAPCTargetScarecrow": true, //Do Bradley have to ignore scarecrows ?
+  "CanNPCTurretsTargetScarecrow": true, //Do NPC turrets have to ignore scarecrows ?
   "Sounds": {
     "Death": "assets/prefabs/npc/murderer/sound/death.prefab",
     "Breathing": "assets/prefabs/npc/murderer/sound/breathing.prefab"
