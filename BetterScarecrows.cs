@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.2.1")]
+    [Info("Better Scarecrows", "Spiikesan", "1.3.1")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -71,6 +71,15 @@ namespace Oxide.Plugins
 
             [JsonProperty("SenseRange")]
             public float SenseRange = 15f;
+
+            [JsonProperty("IgnoreSafeZonePlayers")]
+            public bool IgnoreSafeZonePlayers = true;
+
+            [JsonProperty("CanBradleyAPCTargetScarecrow")]
+            public bool CanBradleyAPCTargetScarecrow = true;
+
+            [JsonProperty("CanNPCTurretsTargetScarecrow")]
+            public bool CanNPCTurretsTargetScarecrow = true;
 
             public Sounds Sounds = new Sounds();
 
@@ -165,12 +174,40 @@ namespace Oxide.Plugins
             NextTick(() =>
             {
                 updateEntityBrain(entity, false);
+
+                timer.In(0.5f, () =>
+                {
+                    BaseMelee weapon = entity.GetHeldEntity() as BaseMelee;
+
+                    if (weapon)
+                    {
+                        ChainsawStart(weapon as Chainsaw);
+                    }
+                });
             });
+        }
+
+        private static void ChainsawStart(Chainsaw chainsaw)
+        {
+            if (chainsaw != null)
+            {
+                chainsaw.ServerNPCStart();
+            }
         }
 
         private void OnEntityDeath(ScarecrowNPC entity)
         {
             Effect.server.Run(_config.Sounds.Death, entity, 0, Vector3.zero, entity.eyes.transform.forward.normalized);
+        }
+
+        private object CanBradleyApcTarget(BradleyAPC bradley, ScarecrowNPC scarecrow)
+        {
+            return _config.CanBradleyAPCTargetScarecrow;
+        }
+
+        private object CanBeTargeted(ScarecrowNPC scarecrow, NPCAutoTurret turret)
+        {
+            return _config.CanNPCTurretsTargetScarecrow;
         }
 
         #endregion
@@ -199,6 +236,7 @@ namespace Oxide.Plugins
                 entity.Brain.AttackRangeMultiplier = _config.AttackRangeMultiplier;
                 entity.Brain.TargetLostRange = _config.TargetLostRange;
                 entity.Brain.SenseRange = _config.SenseRange;
+                entity.Brain.Senses.ignoreSafeZonePlayers = _config.IgnoreSafeZonePlayers;
                 if (!revert)
                 {
                     if (!entity.gameObject.HasComponent<ScarecrowSounds>())
@@ -211,6 +249,9 @@ namespace Oxide.Plugins
                         entity.Brain.AddState(new FleeInhuman());
                     if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.Awaken)))
                         entity.Brain.AddState(new Awaken());
+                    entity.Brain.states[AIState.Attack] = new AttackState();
+                    entity.Brain.states[AIState.Attack].brain = entity.Brain;
+                    entity.Brain.states[AIState.Attack].Reset();
                     entity.Brain.InstanceSpecificDesign = _customDesign;
                 }
                 else
@@ -225,7 +266,112 @@ namespace Oxide.Plugins
 
         #endregion
 
-        #region Custom states
+        #region AI States
+        public class AttackState : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        {
+            private IAIAttack attack;
+
+            Chainsaw chainsaw;
+
+            public AttackState() : base(AIState.Attack)
+            {
+                AgrresiveState = true;
+            }
+
+            private static Vector3 GetAimDirection(Vector3 from, Vector3 target)
+            {
+                return Vector3Ex.Direction2D(target, from);
+            }
+
+            private void StartAttacking(BaseEntity entity)
+            {
+                attack.StartAttacking(entity);
+                if (chainsaw != null)
+                {
+                    chainsaw.ServerNPCStart();
+                    chainsaw.SetFlag(BaseEntity.Flags.Busy, true, false, true);
+                    chainsaw.SetFlag(BaseEntity.Flags.Reserved8, true, false, true);
+                }
+            }
+
+            public override void StateEnter()
+            {
+                base.StateEnter();
+                attack = GetEntity() as IAIAttack;
+                chainsaw = GetEntity().GetHeldEntity() as Chainsaw;
+                BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
+                if (baseEntity != null)
+                {
+                    Vector3 aimDirection = GetAimDirection(brain.Navigator.transform.position, baseEntity.transform.position);
+                    brain.Navigator.SetFacingDirectionOverride(aimDirection);
+                    if (attack.CanAttack(baseEntity))
+                    {
+                        StartAttacking(baseEntity);
+                    }
+                    brain.Navigator.SetDestination(baseEntity.transform.position, BaseNavigator.NavigationSpeed.Fast, 0f, 0f);
+                }
+            }
+
+            public override void StateLeave()
+            {
+                base.StateLeave();
+                brain.Navigator.ClearFacingDirectionOverride();
+                brain.Navigator.Stop();
+                StopAttacking();
+            }
+
+            public override StateStatus StateThink(float delta)
+            {
+                base.StateThink(delta);
+                BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
+                if (attack == null)
+                {
+                    return StateStatus.Error;
+                }
+                if (baseEntity == null)
+                {
+                    brain.Navigator.ClearFacingDirectionOverride();
+                    StopAttacking();
+                    return StateStatus.Finished;
+                }
+                if (brain.Senses.ignoreSafeZonePlayers)
+                {
+                    BasePlayer basePlayer = baseEntity as BasePlayer;
+                    if (basePlayer != null && basePlayer.InSafeZone())
+                    {
+                        return StateStatus.Error;
+                    }
+                }
+                if (!brain.Navigator.SetDestination(baseEntity.transform.position, BaseNavigator.NavigationSpeed.Fast, 0.25f, 0f))
+                {
+                    return StateStatus.Error;
+                }
+                Vector3 aimDirection = GetAimDirection(brain.Navigator.transform.position, baseEntity.transform.position);
+                brain.Navigator.SetFacingDirectionOverride(aimDirection);
+                if (!attack.CanAttack(baseEntity))
+                {
+                    StopAttacking();
+                }
+                else
+                {
+                    StartAttacking(baseEntity);
+                }
+                return StateStatus.Running;
+            }
+
+            private void StopAttacking()
+            {
+                attack.StopAttacking();
+                if (chainsaw != null)
+                {
+                    chainsaw.SetFlag(BaseEntity.Flags.Busy, false, false, true);
+                    chainsaw.SetFlag(BaseEntity.Flags.Reserved8, false, false, true);
+                }
+            }
+        }
+        #endregion
+        #region AI Custom states
+
         private class RoamState : BaseAIBrain<ScarecrowNPC>.BasicAIState
         {
             private StateStatus status = StateStatus.Error;
@@ -303,7 +449,7 @@ namespace Oxide.Plugins
                     _entity = GetEntity() as NPCPlayer;
                     _grenade = _entity.inventory.containerBelt.GetSlot(1);
                     _target = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot) as BasePlayer;
-                    canEnter = base.CanEnter() && _grenade != null && _target != null;
+                    canEnter = base.CanEnter() && _grenade != null && _target != null && (!brain.Senses.ignoreSafeZonePlayers || !_target.InSafeZone());
                 }
                 return canEnter;
             }
@@ -348,6 +494,7 @@ namespace Oxide.Plugins
             {
                 base.StateLeave();
                 _entity.UpdateActiveItem(_entity.inventory.containerBelt.GetSlot(0).uid);
+                ChainsawStart(_entity.GetHeldEntity() as Chainsaw);
             }
         }
 
@@ -463,7 +610,6 @@ namespace Oxide.Plugins
             public ScarecrowNPC Scarecrow { get; private set; }
 
             private Dictionary<AIState, Sound> sounds = new Dictionary<AIState, Sound>();
-            Sound lastSound;
 
             public void Awake()
             {
@@ -482,11 +628,6 @@ namespace Oxide.Plugins
                 if (sounds.TryGetValue(Scarecrow.Brain.CurrentState.StateType, out sound))
                 {
                     sound.TryExecute(Scarecrow, Time.deltaTime);
-
-                    if (lastSound != sound)
-                    {
-                        lastSound = sound;
-                    }
                 }
             }
 

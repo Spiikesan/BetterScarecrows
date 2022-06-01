@@ -7,7 +7,7 @@ Repair broken scarecrows by :
 * Set the delay between grenade throwing (via the original ConVar halloween.scarecrow_throw_beancan_global_delay, defaults to 8). There is also a 10% chance to throw.
 * Repair their life. Note that multipliers doesn't work anymore so they have a little bit more life by default.
 * Repair they reach distance.
-* Repair their sounds (note: The chainsaw is still silent)
+* Repair their sounds.
 
 Improve scarecrows by :
 * Allowing them to roam like animals. No more dormant zombies !
@@ -32,6 +32,9 @@ The config file is as follows :
   "AttackRangeMultiplier": 0.75, //Attack range of the scarecrow, as a multiplier of the weapon. The applied formula is 2 * weaponRange * AttackRangeMultiplier.
   "TargetLostRange": 20.0, //Distance to be forgotten by the scarecrow
   "SenseRange": 15.0, //View distance of the scarecrow to be targeted
+  "IgnoreSafeZonePlayers": true, //Do not attack players in safe zone. Usefull if the CanNPCTurretsTargetScarecrow is set to true.
+  "CanBradleyAPCTargetScarecrow": false, //Do Bradley have to ignore scarecrows ?
+  "CanNPCTurretsTargetScarecrow": false, //Do NPC turrets have to ignore scarecrows ?
   "Sounds": {
     "Death": "assets/prefabs/npc/murderer/sound/death.prefab",
     "Breathing": "assets/prefabs/npc/murderer/sound/breathing.prefab"
