@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.3.1")]
+    [Info("Better Scarecrows", "Spiikesan", "1.3.2")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -171,6 +171,7 @@ namespace Oxide.Plugins
         private void OnEntitySpawned(ScarecrowNPC entity)
         {
             entity.InitializeHealth(_config.Health, _config.Health);
+            // The brain is hooked on the next frame.
             NextTick(() =>
             {
                 updateEntityBrain(entity, false);
@@ -225,43 +226,58 @@ namespace Oxide.Plugins
             if (baseEntityArray != null)
             {
                 foreach (ScarecrowNPC entity in baseEntityArray)
-                    updateEntityBrain(entity, revert);
+                {
+                    if (entity != null && !entity.IsDestroyed)
+                    {
+                        if (entity.Brain != null)
+                        {
+                            updateEntityBrain(entity, revert);
+                        }
+                        else
+                        {
+                            // If the scarecrow just spawned, his brain will only be there the next tick.
+                            NextTick(() => {
+                                if (entity.Brain != null)
+                                {
+                                    updateEntityBrain(entity, revert);
+                                }
+                            });
+                        }
+                    }
+                }
             }
         }
 
         private void updateEntityBrain(ScarecrowNPC entity, bool revert)
         {
-            if (entity != null && !entity.IsDestroyed)
+            entity.Brain.AttackRangeMultiplier = _config.AttackRangeMultiplier;
+            entity.Brain.TargetLostRange = _config.TargetLostRange;
+            entity.Brain.SenseRange = _config.SenseRange;
+            entity.Brain.Senses.ignoreSafeZonePlayers = _config.IgnoreSafeZonePlayers;
+            if (!revert)
             {
-                entity.Brain.AttackRangeMultiplier = _config.AttackRangeMultiplier;
-                entity.Brain.TargetLostRange = _config.TargetLostRange;
-                entity.Brain.SenseRange = _config.SenseRange;
-                entity.Brain.Senses.ignoreSafeZonePlayers = _config.IgnoreSafeZonePlayers;
-                if (!revert)
-                {
-                    if (!entity.gameObject.HasComponent<ScarecrowSounds>())
-                        entity.gameObject.AddComponent<ScarecrowSounds>();
-                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.RoamState)))
-                        entity.Brain.AddState(new RoamState());
-                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.ThrowGrenadeState)))
-                        entity.Brain.AddState(new ThrowGrenadeState());
-                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.FleeInhuman)))
-                        entity.Brain.AddState(new FleeInhuman());
-                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.Awaken)))
-                        entity.Brain.AddState(new Awaken());
-                    entity.Brain.states[AIState.Attack] = new AttackState();
-                    entity.Brain.states[AIState.Attack].brain = entity.Brain;
-                    entity.Brain.states[AIState.Attack].Reset();
-                    entity.Brain.InstanceSpecificDesign = _customDesign;
-                }
-                else
-                {
-                    entity.Brain.InstanceSpecificDesign = null;
-                    if (entity.gameObject.HasComponent<ScarecrowSounds>())
-                        UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
-                }
-                entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
+                if (!entity.gameObject.HasComponent<ScarecrowSounds>())
+                    entity.gameObject.AddComponent<ScarecrowSounds>();
+                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.RoamState)))
+                    entity.Brain.AddState(new RoamState());
+                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.ThrowGrenadeState)))
+                    entity.Brain.AddState(new ThrowGrenadeState());
+                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.FleeInhuman)))
+                    entity.Brain.AddState(new FleeInhuman());
+                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.Awaken)))
+                    entity.Brain.AddState(new Awaken());
+                entity.Brain.states[AIState.Attack] = new AttackState();
+                entity.Brain.states[AIState.Attack].brain = entity.Brain;
+                entity.Brain.states[AIState.Attack].Reset();
+                entity.Brain.InstanceSpecificDesign = _customDesign;
             }
+            else
+            {
+                entity.Brain.InstanceSpecificDesign = null;
+                if (entity.gameObject.HasComponent<ScarecrowSounds>())
+                    UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
+            }
+            entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
         }
 
         #endregion
