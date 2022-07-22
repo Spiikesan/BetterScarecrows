@@ -14,6 +14,8 @@ Improve scarecrows by :
 * Attacking when they are attacked. They respond to try to stay alive, and are not "passive" anymore if hit when they didn't see you.
 * Flee from non human threat that are attacking them (like cactus). They will not have time to escape turrets, tho.
 
+**This plugin is not compatible with Night Zombies as it also modify the AI.**
+
 ## Configuration
 
 Simple configuration is done through server ConVars.
