@@ -10,9 +10,11 @@ Repair broken scarecrows by :
 * Repair their sounds (Thanks to Flames for the Chainsaw).
 
 Improve scarecrows by :
-* Allowing them to roam like animals. No more dormant zombies !
+* Allowing them to roam like animals. No more dormant zombies (configurable) !
 * Attacking when they are attacked. They respond to try to stay alive, and are not "passive" anymore if hit when they didn't see you.
 * Flee from non human threat that are attacking them (like cactus). They will not have time to escape turrets, tho.
+* Change their walk and run speeds.
+* Beeing able to disable their loot.
 
 **This plugin is not compatible with Night Zombies as it also modify the AI.**
 
@@ -34,9 +36,12 @@ The config file is as follows :
   "AttackRangeMultiplier": 0.75, //Attack range of the scarecrow, as a multiplier of the weapon. The applied formula is 2 * weaponRange * AttackRangeMultiplier.
   "TargetLostRange": 20.0, //Distance to be forgotten by the scarecrow
   "SenseRange": 15.0, //View distance of the scarecrow to be targeted
+  "WalkSpeedFraction": 0.3, //Fraction of the speed when the Scarecrow has to walk (when roaming).
+  "RunSpeedFraction": 1.0, //Fraction of the speed when the Scarecrow has to run (when chasing)
   "IgnoreSafeZonePlayers": true, //Do not attack players in safe zone. Usefull if the CanNPCTurretsTargetScarecrow is set to true.
   "CanBradleyAPCTargetScarecrow": true, //Do Bradley have to ignore scarecrows ?
   "CanNPCTurretsTargetScarecrow": true, //Do NPC turrets have to ignore scarecrows ?
+  "DisableLoot": false, //Remove the loot of the Scarecrow corpse ?
   "Sounds": {
     "Death": "assets/prefabs/npc/murderer/sound/death.prefab",
     "Breathing": "assets/prefabs/npc/murderer/sound/breathing.prefab"
@@ -49,6 +54,8 @@ The config file is as follows :
   }
 }
 ```
+
+**aimanager ConVars are NOT in this configuration because it will not only modify Scarecrows, but ALL AI entities. You need to set them in your server.cfg file or using your console/RCON. Please note that you can also set the Scarecrows Halloween convars throug that instead of the plugin's config file.**
 
 
 ## Credits

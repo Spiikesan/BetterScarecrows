@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.3.2")]
+    [Info("Better Scarecrows", "Spiikesan", "1.4.1")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -72,6 +73,12 @@ namespace Oxide.Plugins
             [JsonProperty("SenseRange")]
             public float SenseRange = 15f;
 
+            [JsonProperty("WalkSpeedFraction")]
+            public float WalkSpeed = 0.3f;
+
+            [JsonProperty("RunSpeedFraction")]
+            public float RunSpeed = 1f;
+
             [JsonProperty("IgnoreSafeZonePlayers")]
             public bool IgnoreSafeZonePlayers = true;
 
@@ -80,6 +87,9 @@ namespace Oxide.Plugins
 
             [JsonProperty("CanNPCTurretsTargetScarecrow")]
             public bool CanNPCTurretsTargetScarecrow = true;
+
+            [JsonProperty("DisableLoot")]
+            public bool DisableLoot = false;
 
             public Sounds Sounds = new Sounds();
 
@@ -170,11 +180,10 @@ namespace Oxide.Plugins
 
         private void OnEntitySpawned(ScarecrowNPC entity)
         {
-            entity.InitializeHealth(_config.Health, _config.Health);
             // The brain is hooked on the next frame.
             NextTick(() =>
             {
-                updateEntityBrain(entity, false);
+                UpdateScarecrowConfiguration(entity, false);
 
                 timer.In(0.5f, () =>
                 {
@@ -211,6 +220,11 @@ namespace Oxide.Plugins
             return _config.CanNPCTurretsTargetScarecrow;
         }
 
+        private object OnCorpsePopulate(ScarecrowNPC scarecrow, NPCPlayerCorpse corpse)
+        {
+            return _config.DisableLoot ? corpse : null;
+        }
+
         #endregion
 
         #region Helpers
@@ -220,40 +234,46 @@ namespace Oxide.Plugins
 
         static bool IsCustomState(AIState state) => state >= _lastAIStateEnumValue;
 
+        static void TraceLog(string format, [CallerLineNumber] int lineNumber = 0, [CallerMemberName] string caller = null) => _instance.Puts("(" + caller + ":" + lineNumber + ") " + format);
+
         public void updateAllScarecrows(bool revert)
         {
-            ScarecrowNPC[] baseEntityArray = BaseNetworkable.serverEntities.OfType<ScarecrowNPC>().ToArray();
-            if (baseEntityArray != null)
+            foreach (var entity in BaseNetworkable.serverEntities)
             {
-                foreach (ScarecrowNPC entity in baseEntityArray)
+                ScarecrowNPC scarecrow = entity as ScarecrowNPC;
+                if (scarecrow != null && !scarecrow.IsDestroyed)
                 {
-                    if (entity != null && !entity.IsDestroyed)
+                    if (scarecrow.Brain != null)
                     {
-                        if (entity.Brain != null)
-                        {
-                            updateEntityBrain(entity, revert);
-                        }
-                        else
-                        {
-                            // If the scarecrow just spawned, his brain will only be there the next tick.
-                            NextTick(() => {
-                                if (entity.Brain != null)
-                                {
-                                    updateEntityBrain(entity, revert);
-                                }
-                            });
-                        }
+                        UpdateScarecrowConfiguration(scarecrow, revert);
+                    }
+                    else
+                    {
+                        // If the scarecrow just spawned, his brain will only be there the next tick.
+                        NextTick(() => {
+                            if (scarecrow.Brain != null)
+                            {
+                                UpdateScarecrowConfiguration(scarecrow, revert);
+                            }
+                        });
                     }
                 }
             }
         }
 
-        private void updateEntityBrain(ScarecrowNPC entity, bool revert)
+        private void UpdateScarecrowConfiguration(ScarecrowNPC entity, bool revert)
         {
+            entity.InitializeHealth(_config.Health, _config.Health);
+
             entity.Brain.AttackRangeMultiplier = _config.AttackRangeMultiplier;
             entity.Brain.TargetLostRange = _config.TargetLostRange;
             entity.Brain.SenseRange = _config.SenseRange;
             entity.Brain.Senses.ignoreSafeZonePlayers = _config.IgnoreSafeZonePlayers;
+            entity.Brain.Navigator.SlowSpeedFraction = _config.WalkSpeed;
+            entity.Brain.Navigator.FastSpeedFraction = _config.RunSpeed;
+
+            if (entity.Brain.states == null)
+                entity.Brain.AddStates();
             if (!revert)
             {
                 if (!entity.gameObject.HasComponent<ScarecrowSounds>())
@@ -277,6 +297,7 @@ namespace Oxide.Plugins
                 if (entity.gameObject.HasComponent<ScarecrowSounds>())
                     UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
             }
+
             entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
         }
 
