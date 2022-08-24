@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.4.1")]
+    [Info("Better Scarecrows", "Spiikesan", "1.4.2")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
