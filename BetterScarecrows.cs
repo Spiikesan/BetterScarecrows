@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.4.2")]
+    [Info("Better Scarecrows", "Spiikesan", "1.4.3")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -212,15 +212,15 @@ namespace Oxide.Plugins
 
         private object CanBradleyApcTarget(BradleyAPC bradley, ScarecrowNPC scarecrow)
         {
-            if (_config.CanBradleyAPCTargetScarecrow)
-                return true;
+            if (!_config.CanBradleyAPCTargetScarecrow)
+                return false;
             return null;
         }
 
         private object CanBeTargeted(ScarecrowNPC scarecrow, NPCAutoTurret turret)
         {
-            if (_config.CanNPCTurretsTargetScarecrow)
-                return true;
+            if (!_config.CanNPCTurretsTargetScarecrow)
+                return false;
             return null;
         }
 
