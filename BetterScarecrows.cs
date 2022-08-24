@@ -212,12 +212,16 @@ namespace Oxide.Plugins
 
         private object CanBradleyApcTarget(BradleyAPC bradley, ScarecrowNPC scarecrow)
         {
-            return _config.CanBradleyAPCTargetScarecrow;
+            if (_config.CanBradleyAPCTargetScarecrow)
+                return true;
+            return null;
         }
 
         private object CanBeTargeted(ScarecrowNPC scarecrow, NPCAutoTurret turret)
         {
-            return _config.CanNPCTurretsTargetScarecrow;
+            if (_config.CanNPCTurretsTargetScarecrow)
+                return true;
+            return null;
         }
 
         private object OnCorpsePopulate(ScarecrowNPC scarecrow, NPCPlayerCorpse corpse)
