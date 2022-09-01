@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.4.3")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.1")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -308,7 +308,7 @@ namespace Oxide.Plugins
         #endregion
 
         #region AI States
-        public class AttackState : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        public class AttackState : BaseAIBrain.BasicAIState
         {
             private IAIAttack attack;
 
@@ -335,11 +335,12 @@ namespace Oxide.Plugins
                 }
             }
 
-            public override void StateEnter()
+            public override void StateEnter(BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateEnter();
-                attack = GetEntity() as IAIAttack;
-                chainsaw = GetEntity().GetHeldEntity() as Chainsaw;
+                base.StateEnter(brain, entity);
+                ScarecrowNPC scarecrow = entity as ScarecrowNPC;
+                attack = entity as IAIAttack;
+                chainsaw = scarecrow.GetHeldEntity() as Chainsaw;
                 BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
                 if (baseEntity != null)
                 {
@@ -353,17 +354,17 @@ namespace Oxide.Plugins
                 }
             }
 
-            public override void StateLeave()
+            public override void StateLeave(BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateLeave();
+                base.StateLeave(brain, entity);
                 brain.Navigator.ClearFacingDirectionOverride();
                 brain.Navigator.Stop();
                 StopAttacking();
             }
 
-            public override StateStatus StateThink(float delta)
+            public override StateStatus StateThink(float delta, BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateThink(delta);
+                base.StateThink(delta, brain, entity);
                 BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
                 if (attack == null)
                 {
@@ -413,17 +414,17 @@ namespace Oxide.Plugins
         #endregion
         #region AI Custom states
 
-        private class RoamState : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        private class RoamState : BaseAIBrain.BasicAIState
         {
             private StateStatus status = StateStatus.Error;
             public RoamState() : base(GetAIState(AICustomState.RoamState))
             {
             }
 
-            public override void StateEnter()
+            public override void StateEnter(BaseAIBrain brain, BaseEntity entity)
             {
                 Vector3 bestRoamPosition;
-                base.StateEnter();
+                base.StateEnter(brain, entity);
                 status = StateStatus.Error;
                 if (brain.PathFinder != null)
                 {
@@ -446,15 +447,15 @@ namespace Oxide.Plugins
                 }
             }
 
-            public override void StateLeave()
+            public override void StateLeave(BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateLeave();
+                base.StateLeave(brain, entity);
                 brain.Navigator.Stop();
             }
 
-            public override StateStatus StateThink(float delta)
+            public override StateStatus StateThink(float delta, BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateThink(delta);
+                base.StateThink(delta, brain, entity);
                 if (status == StateStatus.Error)
                 {
                     return status;
@@ -467,7 +468,7 @@ namespace Oxide.Plugins
             }
         }
 
-        private class ThrowGrenadeState : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        private class ThrowGrenadeState : BaseAIBrain.BasicAIState
         {
             bool _isThrown;
             NPCPlayer _entity = null;
@@ -487,28 +488,29 @@ namespace Oxide.Plugins
 
                 if (ConVar.Halloween.scarecrows_throw_beancans && TimeSinceState() >= ConVar.Halloween.scarecrow_throw_beancan_global_delay)
                 {
-                    _entity = GetEntity() as NPCPlayer;
-                    _grenade = _entity.inventory.containerBelt.GetSlot(1);
                     _target = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot) as BasePlayer;
-                    canEnter = base.CanEnter() && _grenade != null && _target != null && (!brain.Senses.ignoreSafeZonePlayers || !_target.InSafeZone());
+                    canEnter = base.CanEnter() && _target != null && (!brain.Senses.ignoreSafeZonePlayers || !_target.InSafeZone());
                 }
                 return canEnter;
             }
 
-            public override void StateEnter()
+            public override void StateEnter(BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateEnter();
-                _entity.UpdateActiveItem(_grenade.uid);
+                base.StateEnter(brain, entity);
+                _entity = entity as NPCPlayer;
+                _grenade = _entity.inventory.containerBelt.GetSlot(1);
+                if (_grenade != null)
+                    _entity.UpdateActiveItem(_grenade.uid);
                 _isThrown = false;
             }
 
-            public override StateStatus StateThink(float delta)
+            public override StateStatus StateThink(float delta, BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateThink(delta);
+                base.StateThink(delta, brain, entity);
                 _target = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot) as BasePlayer;
                 StateStatus status = StateStatus.Error;
 
-                if (_target != null)
+                if (_target != null && _grenade != null)
                 {
                     float distance = Vector3.Distance(_entity.transform.position, _target.transform.position);
                     if (distance < _MAX_DISTANCE)
@@ -531,15 +533,15 @@ namespace Oxide.Plugins
                 return status;
             }
 
-            public override void StateLeave()
+            public override void StateLeave(BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateLeave();
+                base.StateLeave(brain, entity);
                 _entity.UpdateActiveItem(_entity.inventory.containerBelt.GetSlot(0).uid);
                 ChainsawStart(_entity.GetHeldEntity() as Chainsaw);
             }
         }
 
-        public class FleeInhuman : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        public class FleeInhuman : BaseAIBrain.BasicAIState
         {
             private float nextInterval;
             private float stopFleeDistance;
@@ -569,14 +571,14 @@ namespace Oxide.Plugins
                 return flag;
             }
 
-            public override void StateEnter()
+            public override void StateEnter(BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateEnter();
+                base.StateEnter(brain, entity);
                 BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
                 if (baseEntity != null && !(baseEntity is BasePlayer))
                 {
                     stopFleeDistance = UnityEngine.Random.Range(5f, 10f);
-                    FleeFrom(baseEntity, GetEntity());
+                    FleeFrom(baseEntity, entity);
                 }
             }
 
@@ -586,15 +588,15 @@ namespace Oxide.Plugins
                 return base.CanLeave() && ( baseEntity == null || baseEntity is BasePlayer || Vector3Ex.Distance2D(brain.Navigator.transform.position, baseEntity.transform.position) >= stopFleeDistance );
             }
 
-            public override void StateLeave()
+            public override void StateLeave(BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateLeave();
+                base.StateLeave(brain, entity);
                 Stop();
             }
 
-            public override StateStatus StateThink(float delta)
+            public override StateStatus StateThink(float delta, BaseAIBrain brain, BaseEntity entity)
             {
-                base.StateThink(delta);
+                base.StateThink(delta, brain, entity);
                 BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
                 if (baseEntity == null)
                 {
@@ -608,7 +610,7 @@ namespace Oxide.Plugins
                 {
                     return StateStatus.Finished;
                 }
-                if (!brain.Navigator.UpdateIntervalElapsed(nextInterval) && brain.Navigator.Moving || FleeFrom(baseEntity, GetEntity()))
+                if (!brain.Navigator.UpdateIntervalElapsed(nextInterval) && brain.Navigator.Moving || FleeFrom(baseEntity, entity))
                 {
                     return StateStatus.Running;
                 }
@@ -621,7 +623,7 @@ namespace Oxide.Plugins
             }
         }
 
-        public class Awaken : BaseAIBrain<ScarecrowNPC>.BasicAIState
+        public class Awaken : BaseAIBrain.BasicAIState
         {
             BasePlayer[] players = new BasePlayer[1];
 
@@ -629,11 +631,11 @@ namespace Oxide.Plugins
             {
             }
 
-            public override StateStatus StateThink(float delta)
+            public override StateStatus StateThink(float delta, BaseAIBrain brain, BaseEntity entity)
             {
                 StateStatus status = StateStatus.Finished;
                 if (Rust.Ai.AiManager.ai_dormant
-                    && BaseEntity.Query.Server.GetPlayersInSphere(GetEntity().transform.position, Rust.Ai.AiManager.ai_to_player_distance_wakeup_range, players, (p) => p.userID.IsSteamId()) == 0)
+                    && BaseEntity.Query.Server.GetPlayersInSphere(entity.transform.position, Rust.Ai.AiManager.ai_to_player_distance_wakeup_range, players, (p) => p.userID.IsSteamId()) == 0)
                 {
                     status = StateStatus.Error;
                 }
