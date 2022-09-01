@@ -602,7 +602,7 @@ namespace Oxide.Plugins
                 {
                     return StateStatus.Finished;
                 }
-                else if (baseEntity is BasePlayer)
+                else if (baseEntity is BasePlayer && !(baseEntity is NPCPlayer))
                 {
                     return StateStatus.Error;
                 }
