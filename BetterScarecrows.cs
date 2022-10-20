@@ -3,19 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Newtonsoft.Json;
+using ProtoBuf;
 using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.5.1")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.2")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
-        const string b64ScarecrowDesign = "CAEIAwgPCBoIGwgcCB0SUggAEAEaFAgBEAEYACAAKAAwAKoGBQ0AACBBGhkIAxAFGAAgBCgAMAGiBgoNAAAAABUAAAAAGhkIABAGGAAgACgAMAKiBgoNAAAAQRUAAHBBIAASPQgBEAMaDAgFEAIYACAAKAAwABoMCBQQABgAIAAoADABGhkIAxAFGAAgBCgAMAKiBgoNAAAAABUAAAAAIAASRQgCEA8aDAgUEAAYACAAKAAwABoMCAUQARgBIAAoADABGiEIExAEGAAgACgAMASiBgoNAAAAABUAAAAA6gYFDc3MzD0gABJ6CAMQGhoZCAIQABgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAABohCAEQARgAIAAoADADogYKDQAAAAAVAAAAAKoGBQ0AACBBGhkIAxAFGAAgBCgAMASiBgoNAAAAABUAAAAAIAASPAgEEBsaGQgCEAAYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAEYACAAKAAwAqIGCg0AAAAAFQAAAAAgABI8CAUQHBoZCAIQARgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAACAAEjwIBhAdGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBADGAAgACgAMAKiBgoNAAAAABUAAAAAIAAYACIQQmV0dGVyIHNjYXJlY3JvdygBMAA=";
+        const string b64ScarecrowDesign = "CAEIAwgPCBsIHAgdCB4SUggAEAEaFAgBEAEYACAAKAAwAKoGBQ0AACBBGhkIAxAFGAAgBCgAMAGiBgoNAAAAABUAAAAAGhkIABAGGAAgACgAMAKiBgoNAAAAQRUAAHBBIAASPQgBEAMaDAgFEAIYACAAKAAwABoMCBQQABgAIAAoADABGhkIAxAFGAAgBCgAMAKiBgoNAAAAABUAAAAAIAASRQgCEA8aDAgUEAAYACAAKAAwABoMCAUQARgBIAAoADABGiEIExAEGAAgACgAMASiBgoNAAAAABUAAAAA6gYFDc3MzD0gABJ6CAMQGxoZCAIQABgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAABohCAEQARgAIAAoADADogYKDQAAAAAVAAAAAKoGBQ0AACBBGhkIAxAFGAAgBCgAMASiBgoNAAAAABUAAAAAIAASPAgEEBwaGQgCEAAYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAEYACAAKAAwAqIGCg0AAAAAFQAAAAAgABI8CAUQHRoZCAIQARgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAACAAEjwIBhAeGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBADGAAgACgAMAKiBgoNAAAAABUAAAAAIAAYACIQQmV0dGVyIHNjYXJlY3JvdygBMAA=";
 
         const float SOUND_DELAY = 3f;
 
-        static AIState _lastAIStateEnumValue = Enum.GetValues(typeof(AIState)).Cast<AIState>().Max() + 1;
+        static AIState _lastAIStateEnumValue = AIState.MoveToVector3;
+        static AIState _maxAIStateEnumValue = Enum.GetValues(typeof(AIState)).Cast<AIState>().Max();
         static BetterScarecrows _instance;
 
         enum AICustomState
@@ -140,11 +142,37 @@ namespace Oxide.Plugins
         {
             _instance = this;
             _customDesign = ProtoBuf.AIDesign.Deserialize(Convert.FromBase64String(b64ScarecrowDesign));
+            if (_lastAIStateEnumValue != _maxAIStateEnumValue)
+            {
+                PrintWarning($"{_maxAIStateEnumValue - _lastAIStateEnumValue} new state(s) have been added by Facepunch. An update of the AI is required !");
+                computeNewDesign(_maxAIStateEnumValue - _lastAIStateEnumValue);
+            }
             if (_customDesign == null)
             {
                 PrintError("The custom design could not be loaded !");
                 Unload();
             }
+        }
+
+        private void computeNewDesign(int offset)
+        {
+            //Updating availableStates.
+            for (int i = 0; i < _customDesign.availableStates.Count; i++)
+            {
+                if (_customDesign.availableStates[i] > (int)_lastAIStateEnumValue)
+                {
+                    _customDesign.availableStates[i] += offset;
+                }
+            }
+            //Updating state container
+            for (int i = 0; i < _customDesign.stateContainers.Count; i++)
+            {
+                if (_customDesign.stateContainers[i].state > (int)_lastAIStateEnumValue)
+                {
+                    _customDesign.stateContainers[i].state += offset;
+                }
+            }
+            PrintWarning("AI is updated with the new values. An update of the plugin is probably already pending from the plugin developer, but the plugin will continue to work.");
         }
 
         void OnServerInitialized()
@@ -232,11 +260,11 @@ namespace Oxide.Plugins
         #endregion
 
         #region Helpers
-        static AIState GetAIState(AICustomState state) => (AIState)((int)_lastAIStateEnumValue + (int)state);
+        static AIState GetAIState(AICustomState state) => (AIState)((int)_maxAIStateEnumValue + 1 + (int)state);
 
-        static AICustomState GetAICustomState(AIState state) => (AICustomState)((int)state - (int)_lastAIStateEnumValue);
+        static AICustomState GetAICustomState(AIState state) => (AICustomState)((int)state - (int)(_maxAIStateEnumValue + 1));
 
-        static bool IsCustomState(AIState state) => state >= _lastAIStateEnumValue;
+        static bool IsCustomState(AIState state) => state > _maxAIStateEnumValue;
 
         static void TraceLog(string format, [CallerLineNumber] int lineNumber = 0, [CallerMemberName] string caller = null) => _instance.Puts("(" + caller + ":" + lineNumber + ") " + format);
 
@@ -254,7 +282,8 @@ namespace Oxide.Plugins
                     else
                     {
                         // If the scarecrow just spawned, his brain will only be there the next tick.
-                        NextTick(() => {
+                        NextTick(() =>
+                        {
                             if (scarecrow.Brain != null)
                             {
                                 UpdateScarecrowConfiguration(scarecrow, revert);
@@ -585,7 +614,7 @@ namespace Oxide.Plugins
             public override bool CanLeave()
             {
                 BaseEntity baseEntity = brain.Events.Memory.Entity.Get(brain.Events.CurrentInputMemorySlot);
-                return base.CanLeave() && ( baseEntity == null || baseEntity is BasePlayer || Vector3Ex.Distance2D(brain.Navigator.transform.position, baseEntity.transform.position) >= stopFleeDistance );
+                return base.CanLeave() && (baseEntity == null || baseEntity is BasePlayer || Vector3Ex.Distance2D(brain.Navigator.transform.position, baseEntity.transform.position) >= stopFleeDistance);
             }
 
             public override void StateLeave(BaseAIBrain brain, BaseEntity entity)
