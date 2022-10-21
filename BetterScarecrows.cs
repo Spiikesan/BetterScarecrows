@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.5.2")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.3")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -210,20 +210,27 @@ namespace Oxide.Plugins
         private void OnEntitySpawned(ScarecrowNPC entity)
         {
             // The brain is hooked on the next frame.
-            NextTick(() =>
+            if (entity != null
+                && !entity.IsDestroyed)
             {
-                UpdateScarecrowConfiguration(entity, false);
-
-                timer.In(0.5f, () =>
+                NextTick(() =>
                 {
-                    BaseMelee weapon = entity.GetHeldEntity() as BaseMelee;
-
-                    if (weapon)
+                    if (entity.Brain != null)
                     {
-                        ChainsawStart(weapon as Chainsaw);
+                        UpdateScarecrowConfiguration(entity, false);
+
+                        timer.In(0.5f, () =>
+                        {
+                            BaseMelee weapon = entity.GetHeldEntity() as BaseMelee;
+
+                            if (weapon)
+                            {
+                                ChainsawStart(weapon as Chainsaw);
+                            }
+                        });
                     }
                 });
-            });
+            }
         }
 
         private static void ChainsawStart(Chainsaw chainsaw)
@@ -298,7 +305,6 @@ namespace Oxide.Plugins
         private void UpdateScarecrowConfiguration(ScarecrowNPC entity, bool revert)
         {
             entity.InitializeHealth(_config.Health, _config.Health);
-
             entity.Brain.AttackRangeMultiplier = _config.AttackRangeMultiplier;
             entity.Brain.TargetLostRange = _config.TargetLostRange;
             entity.Brain.SenseRange = _config.SenseRange;
