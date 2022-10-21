@@ -18,6 +18,7 @@ namespace Oxide.Plugins
 
         static AIState _lastAIStateEnumValue = AIState.MoveToVector3;
         static AIState _maxAIStateEnumValue = Enum.GetValues(typeof(AIState)).Cast<AIState>().Max();
+
         static BetterScarecrows _instance;
 
         enum AICustomState

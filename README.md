@@ -18,6 +18,8 @@ Improve scarecrows by :
 
 **This plugin is not compatible with Night Zombies as it also modify the AI.**
 
+The AI is automatically fixed if new states are added in the official list.
+
 ## Configuration
 
 Simple configuration is done through server ConVars.
