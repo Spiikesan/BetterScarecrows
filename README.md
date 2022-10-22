@@ -1,6 +1,8 @@
 ## Features
 
-Repair broken scarecrows by :
+**The new Halloween update bring working scarecrows back. This plugin will work but an option has been added to not use the custom AI over the vanilla one.**
+
+Previously, broken scarecrows were fixed by :
 * Allowing them to attack
 * Allowing them to forget you if you are far enough
 * Enable grenade throwing (via the original ConVar halloween.scarecrows_throw_beancans, defaults to true)
@@ -15,10 +17,12 @@ Improve scarecrows by :
 * Flee from non human threat that are attacking them (like cactus). They will not have time to escape turrets, tho.
 * Change their walk and run speeds.
 * Beeing able to disable their loot.
+* Beeing able to ignore safe zone players
+* Beeing able to be ignored by Npc turrets and/or Bradley NPC.
 
 **This plugin is not compatible with Night Zombies as it also modify the AI.**
 
-The AI is automatically fixed if new states are added in the official list.
+The custom AI is now automatically fixed if new states are added in the official list.
 
 ## Configuration
 
@@ -44,6 +48,7 @@ The config file is as follows :
   "CanBradleyAPCTargetScarecrow": true, //Do Bradley have to ignore scarecrows ?
   "CanNPCTurretsTargetScarecrow": true, //Do NPC turrets have to ignore scarecrows ?
   "DisableLoot": false, //Remove the loot of the Scarecrow corpse ?
+  "UseCustomAI": true,
   "Sounds": {
     "Death": "assets/prefabs/npc/murderer/sound/death.prefab",
     "Breathing": "assets/prefabs/npc/murderer/sound/breathing.prefab"

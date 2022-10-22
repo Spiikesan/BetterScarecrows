@@ -94,6 +94,9 @@ namespace Oxide.Plugins
             [JsonProperty("DisableLoot")]
             public bool DisableLoot = false;
 
+            [JsonProperty("UseCustomAI")]
+            public bool UseCustomAI = true;
+
             public Sounds Sounds = new Sounds();
 
             [JsonProperty("ConVars")]
@@ -312,33 +315,38 @@ namespace Oxide.Plugins
             entity.Brain.Navigator.SlowSpeedFraction = _config.WalkSpeed;
             entity.Brain.Navigator.FastSpeedFraction = _config.RunSpeed;
 
-            if (entity.Brain.states == null)
-                entity.Brain.AddStates();
-            if (!revert)
+            if (_config.UseCustomAI)
             {
-                if (!entity.gameObject.HasComponent<ScarecrowSounds>())
-                    entity.gameObject.AddComponent<ScarecrowSounds>();
-                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.RoamState)))
-                    entity.Brain.AddState(new RoamState());
-                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.ThrowGrenadeState)))
-                    entity.Brain.AddState(new ThrowGrenadeState());
-                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.FleeInhuman)))
-                    entity.Brain.AddState(new FleeInhuman());
-                if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.Awaken)))
-                    entity.Brain.AddState(new Awaken());
-                entity.Brain.states[AIState.Attack] = new AttackState();
-                entity.Brain.states[AIState.Attack].brain = entity.Brain;
-                entity.Brain.states[AIState.Attack].Reset();
-                entity.Brain.InstanceSpecificDesign = _customDesign;
-            }
-            else
-            {
-                entity.Brain.InstanceSpecificDesign = null;
-                if (entity.gameObject.HasComponent<ScarecrowSounds>())
-                    UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
-            }
+                if (entity.Brain.states == null)
+                    entity.Brain.AddStates();
+                if (!revert)
+                {
+                    //Sounds should be fixed now.
+                    //if (!entity.gameObject.HasComponent<ScarecrowSounds>())
+                    //    entity.gameObject.AddComponent<ScarecrowSounds>();
+                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.RoamState)))
+                        entity.Brain.AddState(new RoamState());
+                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.ThrowGrenadeState)))
+                        entity.Brain.AddState(new ThrowGrenadeState());
+                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.FleeInhuman)))
+                        entity.Brain.AddState(new FleeInhuman());
+                    if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.Awaken)))
+                        entity.Brain.AddState(new Awaken());
+                    entity.Brain.states[AIState.Attack] = new AttackState();
+                    entity.Brain.states[AIState.Attack].brain = entity.Brain;
+                    entity.Brain.states[AIState.Attack].Reset();
+                    entity.Brain.InstanceSpecificDesign = _customDesign;
+                }
+                else
+                {
+                    entity.Brain.InstanceSpecificDesign = null;
+                    //Sounds should be fixed now.
+                    //if (entity.gameObject.HasComponent<ScarecrowSounds>())
+                    //    UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
+                }
 
-            entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
+                entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
+            }
         }
 
         #endregion
@@ -572,7 +580,8 @@ namespace Oxide.Plugins
             public override void StateLeave(BaseAIBrain brain, BaseEntity entity)
             {
                 base.StateLeave(brain, entity);
-                _entity.UpdateActiveItem(_entity.inventory.containerBelt.GetSlot(0).uid);
+                if (_entity.inventory.containerBelt.GetSlot(0) != null)
+                    _entity.UpdateActiveItem(_entity.inventory.containerBelt.GetSlot(0).uid);
                 ChainsawStart(_entity.GetHeldEntity() as Chainsaw);
             }
         }
