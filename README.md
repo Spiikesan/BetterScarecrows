@@ -18,7 +18,7 @@ Improve scarecrows by :
 * Change their walk and run speeds.
 * Beeing able to disable their loot.
 * Beeing able to ignore safe zone players
-* Beeing able to be ignored by Npc turrets and/or Bradley NPC.
+* Beeing able to be ignored by Npc turrets and/or Bradley NPC and/or ScientistNPC.
 
 **This plugin is not compatible with Night Zombies as it also modify the AI.**
 
@@ -47,6 +47,8 @@ The config file is as follows :
   "IgnoreSafeZonePlayers": true, //Do not attack players in safe zone. Usefull if the CanNPCTurretsTargetScarecrow is set to true.
   "CanBradleyAPCTargetScarecrow": true, //Do Bradley have to ignore scarecrows ?
   "CanNPCTurretsTargetScarecrow": true, //Do NPC turrets have to ignore scarecrows ?
+  "CanNPCScientistsTargetScarecrow": true, //Allow Scientist to target scarecrows ?
+  "CanScarecrowTargetNPCScientists": true, //Allow scarecrows to target Scientists ?
   "DisableLoot": false, //Remove the loot of the Scarecrow corpse ?
   "UseCustomAI": true,
   "Sounds": {

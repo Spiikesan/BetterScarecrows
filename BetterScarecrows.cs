@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.5.4")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.5")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -90,6 +90,12 @@ namespace Oxide.Plugins
 
             [JsonProperty("CanNPCTurretsTargetScarecrow")]
             public bool CanNPCTurretsTargetScarecrow = true;
+
+            [JsonProperty("CanNPCScientistsTargetScarecrow")]
+            public bool CanNPCScientistsTargetScarecrow = true;
+
+            [JsonProperty("CanScarecrowTargetNPCScientists")]
+            public bool CanScarecrowTargetNPCScientists = true;
 
             [JsonProperty("DisableLoot")]
             public bool DisableLoot = false;
@@ -263,6 +269,27 @@ namespace Oxide.Plugins
             return null;
         }
 
+        private object OnNpcTarget(BaseEntity npc, BaseEntity entity)
+        {
+            // ScarecrowNPC is targeted.
+            if (entity is ScarecrowNPC)
+            {
+                if (npc is ScientistNPC && !_config.CanNPCScientistsTargetScarecrow)
+                {
+                    return false;
+                }
+            }
+            // ScarecrowNPC is targeting.
+            if (npc is ScarecrowNPC)
+            {
+                if (entity is ScientistNPC && !_config.CanScarecrowTargetNPCScientists)
+                {
+                    return false;
+                }
+            }
+            return null;
+        }
+
         private object OnCorpsePopulate(ScarecrowNPC scarecrow, NPCPlayerCorpse corpse)
         {
             return _config.DisableLoot ? corpse : null;
@@ -339,14 +366,16 @@ namespace Oxide.Plugins
                 }
                 else
                 {
+                    entity.Brain.states[AIState.Attack] = new ScarecrowBrain.AttackState();
+                    entity.Brain.states[AIState.Attack].brain = entity.Brain;
+                    entity.Brain.states[AIState.Attack].Reset();
                     entity.Brain.InstanceSpecificDesign = null;
                     //Sounds should be fixed now.
                     //if (entity.gameObject.HasComponent<ScarecrowSounds>())
                     //    UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
                 }
-
-                entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
             }
+            entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
         }
 
         #endregion
