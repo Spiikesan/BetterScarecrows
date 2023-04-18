@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.5.5")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.6")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -96,6 +96,12 @@ namespace Oxide.Plugins
 
             [JsonProperty("CanScarecrowTargetNPCScientists")]
             public bool CanScarecrowTargetNPCScientists = true;
+
+            [JsonProperty("CanNPCBanditGuardTargetScarecrow")]
+            public bool CanNPCBanditGuardTargetScarecrow = true;
+
+            [JsonProperty("CanScarecrowTargetNPCBanditGuard")]
+            public bool CanScarecrowTargetNPCBanditGuard = true;
 
             [JsonProperty("DisableLoot")]
             public bool DisableLoot = false;
@@ -274,7 +280,8 @@ namespace Oxide.Plugins
             // ScarecrowNPC is targeted.
             if (entity is ScarecrowNPC)
             {
-                if (npc is ScientistNPC && !_config.CanNPCScientistsTargetScarecrow)
+                if (npc is ScientistNPC && !_config.CanNPCScientistsTargetScarecrow
+                    || npc is BanditGuard && !_config.CanNPCBanditGuardTargetScarecrow)
                 {
                     return false;
                 }
@@ -282,7 +289,8 @@ namespace Oxide.Plugins
             // ScarecrowNPC is targeting.
             if (npc is ScarecrowNPC)
             {
-                if (entity is ScientistNPC && !_config.CanScarecrowTargetNPCScientists)
+                if (entity is ScientistNPC && !_config.CanScarecrowTargetNPCScientists
+                    || entity is BanditGuard && !_config.CanScarecrowTargetNPCBanditGuard)
                 {
                     return false;
                 }

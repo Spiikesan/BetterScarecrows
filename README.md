@@ -49,6 +49,8 @@ The config file is as follows :
   "CanNPCTurretsTargetScarecrow": true, //Do NPC turrets have to ignore scarecrows ?
   "CanNPCScientistsTargetScarecrow": true, //Allow Scientist to target scarecrows ?
   "CanScarecrowTargetNPCScientists": true, //Allow scarecrows to target Scientists ?
+  "CanNPCBanditGuardTargetScarecrow": true, //Allow BanditGuard to target scarecrows ?
+  "CanScarecrowTargetNPCBanditGuard": true, //Allow scarecrows to target BanditGuard ?
   "DisableLoot": false, //Remove the loot of the Scarecrow corpse ?
   "UseCustomAI": true,
   "Sounds": {
