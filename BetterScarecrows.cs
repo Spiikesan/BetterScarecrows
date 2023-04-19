@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.5.6")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.7")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -283,7 +283,7 @@ namespace Oxide.Plugins
                 if (npc is ScientistNPC && !_config.CanNPCScientistsTargetScarecrow
                     || npc is BanditGuard && !_config.CanNPCBanditGuardTargetScarecrow)
                 {
-                    return false;
+                    return true;
                 }
             }
             // ScarecrowNPC is targeting.
@@ -292,7 +292,7 @@ namespace Oxide.Plugins
                 if (entity is ScientistNPC && !_config.CanScarecrowTargetNPCScientists
                     || entity is BanditGuard && !_config.CanScarecrowTargetNPCBanditGuard)
                 {
-                    return false;
+                    return true;
                 }
             }
             return null;
