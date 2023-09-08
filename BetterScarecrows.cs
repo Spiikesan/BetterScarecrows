@@ -8,15 +8,15 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.5.7")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.8")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
-        const string b64ScarecrowDesign = "CAEIAwgPCBsIHAgdCB4SUggAEAEaFAgBEAEYACAAKAAwAKoGBQ0AACBBGhkIAxAFGAAgBCgAMAGiBgoNAAAAABUAAAAAGhkIABAGGAAgACgAMAKiBgoNAAAAQRUAAHBBIAASPQgBEAMaDAgFEAIYACAAKAAwABoMCBQQABgAIAAoADABGhkIAxAFGAAgBCgAMAKiBgoNAAAAABUAAAAAIAASRQgCEA8aDAgUEAAYACAAKAAwABoMCAUQARgBIAAoADABGiEIExAEGAAgACgAMASiBgoNAAAAABUAAAAA6gYFDc3MzD0gABJ6CAMQGxoZCAIQABgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAABohCAEQARgAIAAoADADogYKDQAAAAAVAAAAAKoGBQ0AACBBGhkIAxAFGAAgBCgAMASiBgoNAAAAABUAAAAAIAASPAgEEBwaGQgCEAAYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAEYACAAKAAwAqIGCg0AAAAAFQAAAAAgABI8CAUQHRoZCAIQARgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAACAAEjwIBhAeGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBADGAAgACgAMAKiBgoNAAAAABUAAAAAIAAYACIQQmV0dGVyIHNjYXJlY3JvdygBMAA=";
+        const string b64ScarecrowDesign = "CAEIAwgPCBwIHQgeCB8SUggAEAEaFAgBEAEYACAAKAAwAKoGBQ0AACBBGhkIAxAFGAAgBCgAMAGiBgoNAAAAABUAAAAAGhkIABAGGAAgACgAMAKiBgoNAAAAQRUAAHBBIAASPQgBEAMaDAgFEAIYACAAKAAwABoMCBQQABgAIAAoADABGhkIAxAFGAAgBCgAMAKiBgoNAAAAABUAAAAAIAASRQgCEA8aDAgUEAAYACAAKAAwABoMCAUQARgBIAAoADABGiEIExAEGAAgACgAMASiBgoNAAAAABUAAAAA6gYFDc3MzD0gABJ6CAMQHBoZCAIQABgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAABohCAEQARgAIAAoADADogYKDQAAAAAVAAAAAKoGBQ0AACBBGhkIAxAFGAAgBCgAMASiBgoNAAAAABUAAAAAIAASPAgEEB0aGQgCEAAYACAAKAAwAaIGCg0AAAAAFQAAAAAaGQgEEAEYACAAKAAwAqIGCg0AAAAAFQAAAAAgABI8CAUQHhoZCAIQARgAIAAoADABogYKDQAAAAAVAAAAABoZCAQQABgAIAAoADACogYKDQAAAAAVAAAAACAAEjwIBhAfGhkIAhAAGAAgACgAMAGiBgoNAAAAABUAAAAAGhkIBBADGAAgACgAMAKiBgoNAAAAABUAAAAAIAAYACIQQmV0dGVyIHNjYXJlY3JvdygBMAA=";
 
         const float SOUND_DELAY = 3f;
 
-        static AIState _lastAIStateEnumValue = AIState.MoveToVector3;
+        static AIState _lastAIStateEnumValue = AIState.Blinded;
         static AIState _maxAIStateEnumValue = Enum.GetValues(typeof(AIState)).Cast<AIState>().Max();
 
         static BetterScarecrows _instance;
@@ -57,9 +57,6 @@ namespace Oxide.Plugins
         {
             [JsonProperty("Death")]
             public string Death = "assets/prefabs/npc/murderer/sound/death.prefab";
-
-            [JsonProperty("Breathing")]
-            public string Breathing = "assets/prefabs/npc/murderer/sound/breathing.prefab";
         }
 
         public class ScarecrowConfiguration
@@ -233,28 +230,11 @@ namespace Oxide.Plugins
                     if (entity.Brain != null)
                     {
                         UpdateScarecrowConfiguration(entity, false);
-
-                        timer.In(0.5f, () =>
-                        {
-                            BaseMelee weapon = entity.GetHeldEntity() as BaseMelee;
-
-                            if (weapon)
-                            {
-                                ChainsawStart(weapon as Chainsaw);
-                            }
-                        });
                     }
                 });
             }
         }
 
-        private static void ChainsawStart(Chainsaw chainsaw)
-        {
-            if (chainsaw != null)
-            {
-                chainsaw.ServerNPCStart();
-            }
-        }
 
         private void OnEntityDeath(ScarecrowNPC entity)
         {
@@ -356,9 +336,6 @@ namespace Oxide.Plugins
                     entity.Brain.AddStates();
                 if (!revert)
                 {
-                    //Sounds should be fixed now.
-                    //if (!entity.gameObject.HasComponent<ScarecrowSounds>())
-                    //    entity.gameObject.AddComponent<ScarecrowSounds>();
                     if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.RoamState)))
                         entity.Brain.AddState(new RoamState());
                     if (!entity.Brain.states.ContainsKey(GetAIState(AICustomState.ThrowGrenadeState)))
@@ -378,9 +355,6 @@ namespace Oxide.Plugins
                     entity.Brain.states[AIState.Attack].brain = entity.Brain;
                     entity.Brain.states[AIState.Attack].Reset();
                     entity.Brain.InstanceSpecificDesign = null;
-                    //Sounds should be fixed now.
-                    //if (entity.gameObject.HasComponent<ScarecrowSounds>())
-                    //    UnityEngine.Object.Destroy(entity.gameObject.GetComponent<ScarecrowSounds>());
                 }
             }
             entity.Brain.LoadAIDesignAtIndex(entity.Brain.LoadedDesignIndex());
@@ -619,7 +593,6 @@ namespace Oxide.Plugins
                 base.StateLeave(brain, entity);
                 if (_entity.inventory.containerBelt.GetSlot(0) != null)
                     _entity.UpdateActiveItem(_entity.inventory.containerBelt.GetSlot(0).uid);
-                ChainsawStart(_entity.GetHeldEntity() as Chainsaw);
             }
         }
 
@@ -726,73 +699,6 @@ namespace Oxide.Plugins
             }
         }
 
-        #endregion
-
-        #region Sound management
-
-        private class ScarecrowSounds : FacepunchBehaviour
-        {
-            public ScarecrowNPC Scarecrow { get; private set; }
-
-            private Dictionary<AIState, Sound> sounds = new Dictionary<AIState, Sound>();
-
-            public void Awake()
-            {
-                Scarecrow = GetComponent<ScarecrowNPC>();
-
-                Sound breathingSound = new Sound(_instance._config.Sounds.Breathing, 1f, 10f, 0.8f);
-
-                sounds.Add(AIState.Chase, breathingSound);
-                sounds.Add(AIState.Attack, breathingSound);
-            }
-
-            public void Update()
-            {
-                Sound sound;
-
-                if (sounds.TryGetValue(Scarecrow.Brain.CurrentState.StateType, out sound))
-                {
-                    sound.TryExecute(Scarecrow, Time.deltaTime);
-                }
-            }
-
-            private class Sound
-            {
-                public string SoundName { get; private set; }
-                public float StartDelay { get; private set; }
-                public float MinDelay { get; private set; }
-                public float Chance { get; private set; }
-
-                private float currentDelay;
-
-                public Sound(string soundName, float startDelay, float minDelay, float chance)
-                {
-                    SoundName = soundName;
-                    StartDelay = startDelay;
-                    MinDelay = minDelay;
-                    Chance = chance > 1f ? 1f : chance < 0f ? 0f : chance;
-                    Reset();
-                }
-
-                public void TryExecute(ScarecrowNPC entity, float deltaTime)
-                {
-                    currentDelay += deltaTime;
-                    bool runSound = ((currentDelay >= MinDelay)
-                                    && (!(1.0f - Chance > 0.0)
-                                        || UnityEngine.Random.Range(0f, 1f) < Chance));
-                    if (runSound)
-                    {
-                        Effect.server.Run(SoundName, entity, 0, Vector3.zero, entity.eyes.transform.forward.normalized);
-                        currentDelay = 0f;
-                    }
-                }
-
-                public void Reset()
-                {
-                    currentDelay = MinDelay - StartDelay;
-                }
-            }
-        }
         #endregion
     }
 }
