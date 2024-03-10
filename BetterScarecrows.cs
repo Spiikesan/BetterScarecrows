@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.5.8")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.9")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -485,7 +485,7 @@ namespace Oxide.Plugins
                 {
                     if (!brain.InGroup() || brain.IsGroupLeader)
                     {
-                        bestRoamPosition = brain.PathFinder.GetBestRoamPosition(brain.Navigator, brain.Events.Memory.Position.Get(4), 20f, 100f);
+                        bestRoamPosition = brain.PathFinder.GetBestRoamPosition(brain.Navigator, brain.Navigator.transform.position, brain.Events.Memory.Position.Get(4), 20f, 100f);
                     }
                     else
                     {
