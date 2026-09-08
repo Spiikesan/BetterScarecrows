@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Oxide.Plugins
 {
-    [Info("Better Scarecrows", "Spiikesan", "1.6.0")]
+    [Info("Better Scarecrows", "Spiikesan", "1.5.10")]
     [Description("Fix and improve scarecrows")]
     public class BetterScarecrows : RustPlugin
     {
@@ -385,8 +385,9 @@ namespace Oxide.Plugins
                 if (chainsaw != null)
                 {
                     chainsaw.ServerNPCStart();
-                    chainsaw.SetFlagLocal(BaseEntity.Flags.Busy, true, true);
-                    chainsaw.SetFlagLocal(BaseEntity.Flags.Reserved8, true, true);
+                    chainsaw.SetFlagLocal(BaseEntity.Flags.Busy, true, false);
+                    chainsaw.SetFlagLocal(BaseEntity.Flags.Reserved8, true, false);
+                    chainsaw.SendNetworkUpdate_Flags();
                 }
             }
 
@@ -461,8 +462,9 @@ namespace Oxide.Plugins
                 attack.StopAttacking();
                 if (chainsaw != null)
                 {
-                    chainsaw.SetFlagLocal(BaseEntity.Flags.Busy, false, true);
-                    chainsaw.SetFlagLocal(BaseEntity.Flags.Reserved8, false, true);
+                    chainsaw.SetFlagLocal(BaseEntity.Flags.Busy, false, false);
+                    chainsaw.SetFlagLocal(BaseEntity.Flags.Reserved8, false, false);
+                    chainsaw.SendNetworkUpdate_Flags();
                 }
             }
         }
